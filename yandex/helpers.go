@@ -24,7 +24,11 @@ type Format string
 
 type Language string
 
-var apiRequestURLTemplate = template.Must(template.New("apiRequestURLTemplate").Parse("https://translate.yandex.net/api/{{ if .APIVersion }}{{.APIVersion}}{{ else }}v1.5{{ end }}/tr.json/{{.Route}}?key={{.APIKey}}"))
+const (
+	UnknownLanguage Language = ""
+)
+
+var apiRequestURLTemplate = template.Must(template.New("apiRequestURLTemplate").Parse("https://translate.yandex.net/api/{{ if .APIVersion }}{{.APIVersion}}{{ else }}v1.5{{ end }}/tr.json/{{.Route}}?key={{.APIKey}}{{ if .Text }}&text={{.Text}}{{ end }}"))
 
 func devLogPrintf(fmt_ string, args ...interface{}) {
 	if debug {
@@ -37,12 +41,13 @@ type apiRequest struct {
 	Route      Route  `json:"route"`
 	APIVersion string `json:"api_version"`
 	APIKey     string `json:"api_key"`
+	Text       string `json:"text"`
 }
 
 const (
-	RouteDetect    Route = "detect"
-	RouteTranslate Route = "translate"
-RouteGetLanguages Route = "getLangs"
+	RouteDetect       Route = "detect"
+	RouteTranslate    Route = "translate"
+	RouteGetLanguages Route = "getLangs"
 )
 
 const (

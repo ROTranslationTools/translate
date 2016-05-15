@@ -3,6 +3,7 @@ package yandex
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
@@ -28,7 +29,7 @@ type LanguageDirectory map[Language]LanguageMapping
 type Context struct {
 	Text []string `json:"text,omitempty"`
 	From Language `json:"from,omitempty"`
-	To   Language `json:"from,omitempty"`
+	To   Language `json:"to,omitempty"`
 }
 
 type Response struct {
@@ -83,11 +84,51 @@ func (yt *Yandex) SetPrimaryLanguage(primary Language) {
 	yt.primaryLanguage = primary
 }
 
-func (yt *Yandex) Detect(ctx *Context) (*Response, error) {
+type DetectionResponse struct {
+	Language Language   `json:"lang,omitempty"`
+	Code     StatusCode `json:"code,omitempty"`
+	Message  string     `json:"message,omitempty"`
+}
+
+func flattenTextForRequest(segments []string) string {
+	return strings.Replace(strings.Join(segments, "+"), " ", "+", -1)
+}
+
+func (yx *Yandex) Detect(ctx *Context) (Language, error) {
 	if ctx == nil {
-		return nil, ErrNilContext
+		return UnknownLanguage, ErrNilContext
 	}
-	return nil, ErrUnimplemented
+	flatText := flattenTextForRequest(ctx.Text)
+	if flatText == "" {
+		return UnknownLanguage, nil
+	}
+
+	res, err := invokeAPI(&apiRequest{
+		APIVersion: yx.apiVersion,
+		Route:      RouteDetect,
+		APIKey:     yx.credentials.ApiKey,
+		Text:       flatText,
+	})
+
+	if err != nil {
+		return UnknownLanguage, err
+	}
+
+	data, err := ioutil.ReadAll(res.Body)
+	_ = res.Body.Close()
+	devLogPrintf("detect, data received=%s", data)
+	if err != nil {
+		return UnknownLanguage, err
+	}
+
+	detectResp := &DetectionResponse{}
+	if err := json.Unmarshal(data, detectResp); err != nil {
+		return UnknownLanguage, err
+	}
+	if detectResp.Message != "" {
+		return UnknownLanguage, fmt.Errorf("%s", detectResp.Message)
+	}
+	return detectResp.Language, nil
 }
 
 func (yt *Yandex) Translate(ctx *Context) (*Response, error) {

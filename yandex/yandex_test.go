@@ -1,16 +1,12 @@
 package yandex
 
 import (
+	"strings"
 	"testing"
 )
 
 func TestFetchLanguages(t *testing.T) {
 	t.Parallel()
-
-	yx, err := New()
-	if err != nil {
-		t.Fatalf("initializing new err=%v", err)
-	}
 
 	languages, err := yx.FetchLanguages()
 	if err != nil {
@@ -96,6 +92,34 @@ func TestValidTransitionsFromTo(t *testing.T) {
 		got, want := yx.ValidTransition(fromLang, toLang), tt.want
 		if got != want {
 			t.Errorf("#%d: got=%v want=%v; from=%q to=%q", i, got, want, fromLang, toLang)
+		}
+	}
+}
+
+func TestDetect(t *testing.T) {
+	testCases := [...]struct {
+		samples  string
+		expected Language
+	}{
+		0: {"mamacita", "es"},
+		1: {"word up though\nhey hey", "en"},
+		2: {"Привет", "ru"},
+		3: {"bonjour", "fr"},
+		4: {"Mulţumesc foarte mulţ", "ro"},
+		5: {"nasılsın? adın ne", "az"},
+		6: {"кофе?", "ru"},
+		7: {"", UnknownLanguage}, // Ensure that we don't expend resources on empty string
+	}
+
+	for i, tt := range testCases {
+		ctx := &Context{Text: strings.Split(tt.samples, "\n")}
+		got, err := yx.Detect(ctx)
+		if err != nil {
+			t.Fatalf("#%d err=%v", i, err)
+		}
+		want := Language(tt.expected)
+		if got != want {
+			t.Errorf("#%d: got=%v want=%v", i, got, want)
 		}
 	}
 }
