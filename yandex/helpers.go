@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"text/template"
 )
 
@@ -28,7 +29,7 @@ const (
 	UnknownLanguage Language = ""
 )
 
-var apiRequestURLTemplate = template.Must(template.New("apiRequestURLTemplate").Parse("https://translate.yandex.net/api/{{ if .APIVersion }}{{.APIVersion}}{{ else }}v1.5{{ end }}/tr.json/{{.Route}}?key={{.APIKey}}{{ if .Text }}&text={{.Text}}{{ end }}"))
+var apiRequestURLTemplate = template.Must(template.New("apiRequestURLTemplate").Parse("https://translate.yandex.net/api/{{ if .APIVersion }}{{.APIVersion}}{{ else }}v1.5{{ end }}/tr.json/{{.Route}}?key={{.APIKey}}{{ if .Text }}&text={{.Text}}{{ end }}{{ if .LanguageDirection }}&lang={{.LanguageDirection}}{{ end }}"))
 
 func devLogPrintf(fmt_ string, args ...interface{}) {
 	if debug {
@@ -37,11 +38,12 @@ func devLogPrintf(fmt_ string, args ...interface{}) {
 }
 
 type apiRequest struct {
-	Format     Format `json:"format"`
-	Route      Route  `json:"route"`
-	APIVersion string `json:"api_version"`
-	APIKey     string `json:"api_key"`
-	Text       string `json:"text"`
+	Format            Format   `json:"format"`
+	Route             Route    `json:"route"`
+	APIVersion        string   `json:"api_version"`
+	APIKey            string   `json:"api_key"`
+	Text              string   `json:"text"`
+	LanguageDirection Language `json:"lang"`
 }
 
 const (
@@ -54,6 +56,12 @@ const (
 	FormatPlain Format = "plain"
 	FormatHTML  Format = "html"
 )
+
+func languageDirection(from, to Language) Language {
+	return Language(strings.Join([]string{
+		string(from), string(to),
+	}, LanguageDirectionSeparator))
+}
 
 func (f Format) String() string {
 	switch f {

@@ -32,7 +32,10 @@ type Context struct {
 	To   Language `json:"to,omitempty"`
 }
 
-type Response struct {
+type TranslationResponse struct {
+	Message string     `json:"message,omitempty"`
+	Text    []string     `json:"text,omitempty"`
+	Code    StatusCode `json:"code,omitempty"`
 }
 
 type Yandex struct {
@@ -131,11 +134,42 @@ func (yx *Yandex) Detect(ctx *Context) (Language, error) {
 	return detectResp.Language, nil
 }
 
-func (yt *Yandex) Translate(ctx *Context) (*Response, error) {
+func (yt *Yandex) Translate(ctx *Context) ([]string, error) {
 	if ctx == nil {
 		return nil, ErrNilContext
 	}
-	return nil, ErrUnimplemented
+	flatText := flattenTextForRequest(ctx.Text)
+	if flatText == "" {
+		// TODO: Consider this an inconsistent state
+		return nil, nil
+	}
+
+	res, err := invokeAPI(&apiRequest{
+		APIVersion:        yx.apiVersion,
+		Route:             RouteTranslate,
+		APIKey:            yx.credentials.ApiKey,
+		Text:              flatText,
+		LanguageDirection: languageDirection(ctx.From, ctx.To),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadAll(res.Body)
+	_ = res.Body.Close()
+	devLogPrintf("translate, data received=%s", data)
+	if err != nil {
+		return nil, err
+	}
+	translateResp := &TranslationResponse{}
+	if err := json.Unmarshal(data, translateResp); err != nil {
+		return nil, err
+	}
+	if translateResp.Message != "" {
+		return nil, fmt.Errorf("%s", translateResp.Message)
+	}
+	return translateResp.Text, nil
 }
 
 func mapLanguages(directionSetLangs []Language) LanguageDirectory {
@@ -172,7 +206,7 @@ func (yx *Yandex) FetchLanguages() (LanguageDirectory, error) {
 	// Now fetch them
 	res, err := invokeAPI(&apiRequest{
 		APIVersion: yx.apiVersion,
-		Route:      "getLangs",
+		Route:      RouteGetLanguages,
 		APIKey:     yx.credentials.ApiKey,
 	})
 

@@ -1,6 +1,7 @@
 package yandex
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -119,6 +120,34 @@ func TestDetect(t *testing.T) {
 		}
 		want := Language(tt.expected)
 		if got != want {
+			t.Errorf("#%d: got=%v want=%v", i, got, want)
+		}
+	}
+}
+
+func TestTranslate(t *testing.T) {
+	testCases := [...]struct {
+		original string
+		want     []string
+		from, to Language
+	}{
+		0: {"good morning", []string{"guten morgen"}, "en", "de"},
+		1: {"Ta fête", []string{"Твой праздник"}, "fr", "ru"},
+		2: {"clase mundial", []string{"world-class"}, "es", "en"},
+		3: {"добро пожаловать к моему месту", []string{"bienvenue à mon site"}, "ru", "fr"},
+	}
+
+	for i, tt := range testCases {
+		ctx := &Context{
+			From: tt.from, To: tt.to,
+			Text: strings.Split(tt.original, "\n"),
+		}
+		got, err := yx.Translate(ctx)
+		if err != nil {
+			t.Fatalf("#%d err=%v", i, err)
+		}
+		want := tt.want
+		if !reflect.DeepEqual(got, want) {
 			t.Errorf("#%d: got=%v want=%v", i, got, want)
 		}
 	}
