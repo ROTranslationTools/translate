@@ -145,9 +145,9 @@ func (yt *Yandex) Translate(ctx *Context) ([]string, error) {
 	}
 
 	res, err := invokeAPI(&apiRequest{
-		APIVersion:        yx.apiVersion,
+		APIVersion:        yt.apiVersion,
 		Route:             RouteTranslate,
-		APIKey:            yx.credentials.ApiKey,
+		APIKey:            yt.credentials.ApiKey,
 		Text:              flatText,
 		LanguageDirection: languageDirection(ctx.From, ctx.To),
 	})
